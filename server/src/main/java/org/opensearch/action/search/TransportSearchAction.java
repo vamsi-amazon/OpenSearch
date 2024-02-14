@@ -419,6 +419,11 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
             relativeStartNanos,
             System::nanoTime
         );
+        // taking over by query engine.
+        if (!originalSearchRequest.source().queryEngines().isEmpty()) {
+          originalSearchRequest.source().queryEngines().get(0).executeQuery(originalSearchRequest, originalListener);
+          return;
+        }
         PipelinedRequest searchRequest;
         ActionListener<SearchResponse> listener;
         try {

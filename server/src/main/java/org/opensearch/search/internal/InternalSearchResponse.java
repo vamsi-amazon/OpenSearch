@@ -41,6 +41,7 @@ import org.opensearch.core.xcontent.ToXContentFragment;
 import org.opensearch.search.SearchExtBuilder;
 import org.opensearch.search.SearchHits;
 import org.opensearch.search.aggregations.InternalAggregations;
+import org.opensearch.search.externalengine.QueryEngineExtBuilder;
 import org.opensearch.search.profile.SearchProfileShardResults;
 import org.opensearch.search.suggest.Suggest;
 
@@ -87,6 +88,20 @@ public class InternalSearchResponse extends SearchResponseSections implements Wr
         super(hits, aggregations, suggest, timedOut, terminatedEarly, profileResults, numReducePhases, searchExtBuilderList);
     }
 
+    public InternalSearchResponse(
+        SearchHits hits,
+        InternalAggregations aggregations,
+        Suggest suggest,
+        SearchProfileShardResults profileResults,
+        boolean timedOut,
+        Boolean terminatedEarly,
+        int numReducePhases,
+        List<SearchExtBuilder> searchExtBuilderList,
+        List<QueryEngineExtBuilder> queryEngineExtBuilders
+    ) {
+        super(hits, aggregations, suggest, timedOut, terminatedEarly, profileResults, numReducePhases, searchExtBuilderList, queryEngineExtBuilders);
+    }
+
     public InternalSearchResponse(StreamInput in) throws IOException {
         super(
             new SearchHits(in),
@@ -96,7 +111,8 @@ public class InternalSearchResponse extends SearchResponseSections implements Wr
             in.readOptionalBoolean(),
             in.readOptionalWriteable(SearchProfileShardResults::new),
             in.readVInt(),
-            readSearchExtBuildersOnOrAfter(in)
+            readSearchExtBuildersOnOrAfter(in),
+            readQueryEngineExtBuildersOnOrAfter(in)
         );
     }
 
@@ -110,6 +126,7 @@ public class InternalSearchResponse extends SearchResponseSections implements Wr
         out.writeOptionalWriteable(profileResults);
         out.writeVInt(numReducePhases);
         writeSearchExtBuildersOnOrAfter(out, searchExtBuilders);
+        writeQueryEngineExtBuildersOnOrAfter(out, queryEngineExtBuilders);
     }
 
     private static List<SearchExtBuilder> readSearchExtBuildersOnOrAfter(StreamInput in) throws IOException {
@@ -119,6 +136,15 @@ public class InternalSearchResponse extends SearchResponseSections implements Wr
     private static void writeSearchExtBuildersOnOrAfter(StreamOutput out, List<SearchExtBuilder> searchExtBuilders) throws IOException {
         if (out.getVersion().onOrAfter(Version.V_2_10_0)) {
             out.writeNamedWriteableList(searchExtBuilders);
+        }
+    }
+    private static List<QueryEngineExtBuilder> readQueryEngineExtBuildersOnOrAfter(StreamInput in) throws IOException {
+        return (in.getVersion().onOrAfter(Version.V_2_11_0)) ? in.readNamedWriteableList(QueryEngineExtBuilder.class) : Collections.emptyList();
+    }
+
+    private static void writeQueryEngineExtBuildersOnOrAfter(StreamOutput out, List<QueryEngineExtBuilder> queryEngineExtBuilders) throws IOException {
+        if (out.getVersion().onOrAfter(Version.V_2_11_0)) {
+            out.writeNamedWriteableList(queryEngineExtBuilders);
         }
     }
 }

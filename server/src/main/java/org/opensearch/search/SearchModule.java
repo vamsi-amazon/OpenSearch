@@ -257,6 +257,7 @@ import org.opensearch.search.aggregations.pipeline.StatsBucketPipelineAggregator
 import org.opensearch.search.aggregations.pipeline.SumBucketPipelineAggregationBuilder;
 import org.opensearch.search.aggregations.pipeline.SumBucketPipelineAggregator;
 import org.opensearch.search.aggregations.support.ValuesSourceRegistry;
+import org.opensearch.search.externalengine.QueryEngine;
 import org.opensearch.search.fetch.FetchPhase;
 import org.opensearch.search.fetch.FetchSubPhase;
 import org.opensearch.search.fetch.subphase.ExplainPhase;
@@ -357,6 +358,7 @@ public class SearchModule {
         registerQueryParsers(plugins);
         registerRescorers(plugins);
         registerSortParsers(plugins);
+        registerQueryEngines(plugins);
         registerValueFormats();
         registerSignificanceHeuristics(plugins);
         this.valuesSourceRegistry = registerAggregations(plugins);
@@ -873,6 +875,15 @@ public class SearchModule {
     private void registerRescorers(List<SearchPlugin> plugins) {
         registerRescorer(new RescorerSpec<>(QueryRescorerBuilder.NAME, QueryRescorerBuilder::new, QueryRescorerBuilder::fromXContent));
         registerFromPlugin(plugins, SearchPlugin::getRescorers, this::registerRescorer);
+    }
+
+    private void registerQueryEngines(List<SearchPlugin> plugins) {
+        registerFromPlugin(plugins, SearchPlugin::getQueryEnginesSpecs, this::registerQueryEngine);
+    }
+
+    private void registerQueryEngine(SearchPlugin.QueryEngineSpec<?> spec) {
+        namedXContents.add(new NamedXContentRegistry.Entry(QueryEngine.class, spec.getName(), (p, c) -> spec.getParser().fromXContent(p)));
+        namedWriteables.add(new NamedWriteableRegistry.Entry(QueryEngine.class, spec.getName().getPreferredName(), spec.getReader()));
     }
 
     private void registerRescorer(RescorerSpec<?> spec) {
