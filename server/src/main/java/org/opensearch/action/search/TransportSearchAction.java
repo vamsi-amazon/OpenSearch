@@ -428,6 +428,11 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
             relativeStartNanos,
             System::nanoTime
         );
+        // taking over by query engine.
+        if (!originalSearchRequest.source().queryEngines().isEmpty()) {
+          originalSearchRequest.source().queryEngines().get(0).executeQuery(originalSearchRequest, originalListener);
+          return;
+        }
         if (originalSearchRequest.isPhaseTook() == null) {
             originalSearchRequest.setPhaseTook(clusterService.getClusterSettings().get(SEARCH_PHASE_TOOK_ENABLED));
         }
@@ -1220,8 +1225,8 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
                 timeProvider,
                 clusterState,
                 task,
-                (iter) -> {
-                    AbstractSearchAsyncAction<? extends SearchPhaseResult> action = searchAsyncAction(
+                (iter) -> new WrappingSearchAsyncActionPhase(
+                    searchAsyncAction(
                         task,
                         searchRequest,
                         executor,
@@ -1237,14 +1242,8 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
                         threadPool,
                         clusters,
                         searchRequestContext
-                    );
-                    return new SearchPhase("none") {
-                        @Override
-                        public void run() {
-                            action.start();
-                        }
-                    };
-                },
+                    )
+                ),
                 clusters,
                 searchRequestContext
             );
