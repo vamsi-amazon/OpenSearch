@@ -55,6 +55,7 @@ public class FileCacheFactory {
                 Path key = removalNotification.getKey();
                 if (removalReason != RemovalReason.REPLACED) {
                     catchAsRuntimeException(value::close);
+                    System.out.println(key);
                     catchAsRuntimeException(() -> Files.deleteIfExists(key));
                 }
             });
